@@ -1,0 +1,15 @@
+\section{Related Work}
+\label{sec:related_work}
+
+Our research draws on literature from representation engineering and abstractive summarization. Specifically, we investigate whether the \newterm{\fv} mechanism, identified in simple \icl tasks, can be generalized to more complex generative tasks.
+
+\para{\fvs in LLMs.}
+Recent work has shown that \fvsabbr represent simple in-context learning tasks as compact, low-rank vectors in their hidden states~\cite{todd2023function}. These vectors, termed \newterm{\fvs}, are often localized in the middle layers of the model and can be extracted using causal mediation analysis or by averaging activation values across multiple task-specific prompts. While Todd et al. focused on straightforward tasks such as antonym generation or capitalization, our work explores whether such a mechanism exists for complex tasks like summarization, which require the integration of multiple constraints such as importance and stylistic bias.
+
+\para{Internal Representations of Summarization Constraints.}
+The internal representations of summarization-related features have also been explored. Zhou et al.~\cite{zhou2026what} investigated the internal notion of ``importance'' and salience in \fvsabbr, identifying that middle-to-late layers are highly predictive of what the model considers significant when generating summaries. Similarly, Moon et al.~\cite{moon2025length} discovered internal representations of sequence length, demonstrating that length information is partially disentangled from semantic content and can be manipulated by scaling specific hidden units. These findings support our hypothesis that complex constraints like stylistic bias (\extractive vs. \abstractive) may also be internally represented and decodable.
+
+\para{Continuous Task Representations.}
+Other researchers have explored \icl using continuous vector representations instead of discrete tokens. Zhuang et al.~\cite{zhuang2024vectoricl} introduced \textsc{Vector-ICL}, demonstrating that complex tasks can be triggered or guided by vector-based representations of the task context. Our approach builds on this idea by extracting layer-wise \fvsabbr to understand how these continuous representations evolve across the network and how they encode default stylistic constraints.
+
+By bridging the gap between simple task vectors and complex summarization constraints, we aim to provide a more holistic understanding of how \fvsabbr represent and execute multi-faceted generative tasks.

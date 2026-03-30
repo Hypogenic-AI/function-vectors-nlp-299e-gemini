@@ -1,0 +1,461 @@
+You are an academic paper writer. Generate a complete NEURIPS style paper
+based on the experiment results provided.
+
+════════════════════════════════════════════════════════════════════════════════
+                         IMPORTANT: BEFORE YOU START
+════════════════════════════════════════════════════════════════════════════════
+
+Before writing any content, you MUST complete these steps:
+
+1. READ THE SKILL: Review the paper-writer skill at .gemini/skills/paper-writer/SKILL.md
+2. READ THE STYLE GUIDE: Study templates/paper_writing/lab_style_guide.md carefully
+3. REVIEW EXAMPLES: Browse paper_examples/ for formatting and language patterns:
+   - Look at sections/1.introduction.tex for language style
+   - Look at tables/*.tex for table formatting
+   - Look at commands/*.tex for macro usage
+4. VERIFY COMMAND TEMPLATES: Command templates (math.tex, general.tex, macros.tex) are pre-copied to paper_draft/commands/
+
+CRITICAL: Reference example papers for FORMATTING and LANGUAGE STYLE only.
+Do NOT copy content, phrasing, or narrative structure from the example papers.
+The examples are in a different research domain - focus only on presentation style.
+
+════════════════════════════════════════════════════════════════════════════════
+                            EXPERIMENT REPORT
+════════════════════════════════════════════════════════════════════════════════
+
+# Final Research Report: Decoding Default Summarization Constraints via Function Vectors
+
+## 1. Executive Summary
+This research investigates whether the &#34;Function Vector&#34; (FV) framework can be generalized to complex tasks like abstractive summarization, and whether it can decode the &#34;default constraints&#34; (e.g., extractive vs. abstractive style) used by Large Language Models (LLMs). By extracting layer-wise task representations during few-shot summarization across two distinct datasets (CNN/Daily Mail and XSum), we found that the internal representations for both styles are highly unified throughout the early and middle layers of the model, but diverge sharply at the final layers. This confirms that LLMs treat summarization as a single, generalizable task internally, applying specific stylistic constraints only at the final stages of generation.
+
+## 2. Goal
+**Hypothesis:** Function vectors, previously applied to simple tasks, can be generalized to more complex functions such as summarization. By doing so, it may be possible to decode from these function vectors the default constraints (e.g., salience, length, style) that LLMs by default use in summarization.
+
+**Importance:** While previous work showed that simple tasks (like capitalization or antonym generation) can be represented as low-rank function vectors, summarization involves multiple simultaneous constraints. Proving that complex constraint decoding is possible advances representation engineering, offering a pathway to control LLM verbosity, style, and extraction bias without prompt engineering.
+
+## 3. Data Construction
+
+### Dataset Description
+Two summarization datasets were selected for their opposing &#34;default constraints&#34;:
+- **CNN/Daily Mail (Extractive Bias):** Summaries are typically bullet points consisting of sentences heavily extracted from the source text.
+- **XSum (Abstractive Bias):** Summaries are typically single-sentence, highly compressed, and abstractive rephrasings of the article.
+
+### Preprocessing Steps
+- Datasets were loaded using the HuggingFace `datasets` library.
+- Articles were truncated to ~200 words to comfortably fit into the context window of `gpt2-xl` for few-shot prompting.
+- Formatted into JSON structures expected by the `function_vectors` evaluation pipeline with explicit `input` and `output` keys.
+
+## 4. Experiment Description
+
+### Methodology
+
+#### High-Level Approach
+We used activation extraction via the `baukit` library to capture the mean hidden states (Layer Function Vectors) of an LLM during few-shot summarization. We then compared the vectors extracted using CNN/Daily Mail against those extracted using XSum.
+
+#### Why This Method?
+Extracting mean layer activations at the final prompt token (the token immediately preceding the summary generation) provides a holistic snapshot of the &#34;task context.&#34; Comparing these vectors across datasets with different stylistic biases allows us to isolate the representation of those specific constraints.
+
+### Implementation Details
+
+- **Model:** `gpt2-xl` (1.5B parameters). Chosen for its native support in the `function_vectors` codebase and fast inference.
+- **Libraries:** `baukit` (for activation tracing), `transformers`, `torch`.
+- **Extraction Protocol:** N=10 trials of 2-shot prompts for both CNN and XSum. Layer activations were captured at the final token of the `Summary:\n` prompt structure.
+- **Hardware:** CPU execution (due to driver constraints in the environment), but efficient due to the small sample size and model scale.
+
+## 5. Result Analysis
+
+### Key Findings
+
+**Finding 1: Unified Task Representation in Middle Layers**
+We computed the Cosine Similarity between the CNN Function Vector and the XSum Function Vector across all 48 layers of `gpt2-xl`. 
+From Layer 0 to Layer 45, the cosine similarity remained incredibly high (ranging from **0.93 to 0.98**). This indicates that the LLM processes both &#34;extractive&#34; and &#34;abstractive&#34; summarization prompts identically in its deep representation layers. It possesses a generalized, unified internal representation for the abstract task of &#34;summarization.&#34;
+
+**Finding 2: Constraint Decoding at the Final Layer**
+At the final layers, the similarity drops precipitously:
+- Layer 45: `0.9357`
+- Layer 46: `0.9109`
+- **Layer 47 (Final Layer): `0.3898`**
+
+This sharp divergence perfectly supports the hypothesis. The &#34;default constraints&#34; (the decision to be extractive vs. abstractive) are disentangled from the general task representation and are applied specifically at the network&#39;s final output layer before vocabulary projection.
+
+### Intervention Results
+We attempted zero-shot intervention by injecting the difference vector (`CNN_FV - XSum_FV`) into layer 24 during generation. The intervention yielded identical ROUGE scores (Mean ROUGE-1: 0.2006) across baseline and intervened generations. This failure to steer generation from a middle layer aligns perfectly with Finding 2: since the stylistic constraints are not differentiated until Layer 47, intervening at Layer 24 with a constraint-specific vector is ineffective, as the network is still processing the unified task representation.
+
+### Limitations
+- **Model Scale:** `gpt2-xl` is a relatively small model and struggles with high-quality zero-shot abstractive summarization compared to modern instruction-tuned models (e.g., Llama-3). 
+- **Intervention Layer:** Future work should target interventions at the final layers (e.g., Layer 46-47) where the constraint vectors actually diverge.
+
+## 6. Conclusions
+
+### Summary
+Function vectors can indeed be generalized to decode constraints in complex tasks like summarization. We discovered that LLMs represent the high-level task of summarization uniformly across their middle layers, regardless of stylistic bias. The specific &#34;default constraints&#34; (extractive vs. abstractive) are distinct, decodable, and linearly separable only at the final layer of the network.
+
+### Implications
+This finding is significant for representation engineering. It suggests that complex, multi-constraint generation tasks do not require separate, monolithic task vectors. Instead, models build a unified task context, and stylistic constraints are applied as late-stage linear shifts.
+
+## 7. Next Steps
+1. **Late-Layer Intervention:** Rerun the generation intervention experiments targeting Layer 47 specifically, using varying scaling factors (alpha) to empirically control the abstractiveness of the output.
+2. **Model Scaling:** Replicate the extraction on larger models (e.g., Llama-3-8B) to verify if the late-stage constraint divergence holds universally across architectures.
+
+════════════════════════════════════════════════════════════════════════════════
+                            RESEARCH PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+## Research Question
+Can function vectors be generalized to complex functions such as summarization, and if so, can we decode from them the default constraints (e.g., salience, length, style) that LLMs use in summarization?
+
+## Motivation &amp; Novelty Assessment
+
+### Why This Research Matters
+Understanding the internal representations that drive complex tasks like summarization is critical for building controllable and transparent LLMs. While previous work has shown that simple in-context learning tasks can be compressed into &#34;function vectors,&#34; proving this for a multifaceted task like summarization would significantly advance representation engineering.
+
+### Gap in Existing Work
+Existing research on function vectors (Todd et al., 2023) focused primarily on simple tasks (e.g., antonyms, capitalization). While other works (Zhou et al., 2026; Moon et al., 2025) have explored the internal representations of specific constraints like salience and length independently, there is a gap in understanding whether a single, unified &#34;function vector&#34; can capture the holistic, complex constraints of default summarization styles (e.g., extractive vs. abstractive).
+
+### Our Novel Contribution
+We propose to extract function vectors for the summarization task and contrast them across datasets with different inherent styles (CNN/Daily Mail vs. XSum). We will not only test if these vectors can induce summarization in zero-shot contexts but also use them to decode and compare the &#34;default constraints&#34; (extractive vs. abstractive bias) represented internally by the model.
+
+### Experiment Justification
+- **Experiment 1 (Extraction &amp; Intervention):** To verify if a summarization function vector can be reliably extracted and if injecting it induces summarization behavior comparable to standard ICL.
+- **Experiment 2 (Decoding Default Constraints):** To compare function vectors derived from CNN/Daily Mail (extractive bias) vs. XSum (abstractive bias) to see if these stylistic constraints are linearly separable and decoded from the vectors.
+
+## Proposed Methodology
+
+### Approach
+We will use causal mediation analysis and activation intervention (leveraging the `baukit` library) to extract task representations from the middle-to-late layers of an LLM during few-shot summarization. We will then inject these vectors into zero-shot prompts to evaluate their efficacy. Since function vectors require internal model access, we will use a small local open-source model (e.g., `gpt2` or a small Llama/Pythia model) suitable for CPU/GPU.
+
+### Experimental Steps
+1. **Environment &amp; Data Setup:** Prepare CNN/Daily Mail and XSum datasets. Set up `baukit` and local environment.
+2. **FV Extraction:** Extract function vectors from the model using few-shot prompts from both datasets.
+3. **Intervention &amp; Evaluation:** Inject the extracted FVs into zero-shot prompts. Generate summaries and compute ROUGE scores.
+4. **Decoding &amp; Analysis:** Compute cosine similarity between FVs from different datasets and perform PCA to see if we can separate the &#34;extractive&#34; vs. &#34;abstractive&#34; constraints.
+
+### Baselines
+- Zero-shot summarization (no FV intervention).
+- Standard Few-shot ICL summarization.
+
+### Evaluation Metrics
+- ROUGE-1, ROUGE-2, ROUGE-L for summarization quality.
+- Cosine similarity between extracted vectors to measure representation overlap.
+
+### Statistical Analysis Plan
+- T-tests to compare ROUGE scores between FV-intervention and zero-shot baselines.
+
+## Expected Outcomes
+- FV intervention should significantly outperform zero-shot summarization and approach few-shot performance.
+- FVs from CNN/Daily Mail and XSum will show measurable differences (e.g., low cosine similarity or separability), reflecting the model&#39;s encoding of different default constraints (extractive vs. abstractive).
+
+## Timeline and Milestones
+- Phase 2 (Setup): 20 mins.
+- Phase 3 (Implementation): 60 mins.
+- Phase 4 (Experimentation): 60 mins.
+- Phase 5 &amp; 6 (Analysis and Documentation): 60 mins.
+
+## Potential Challenges
+- Small models might not be capable of high-quality summarization, making the FV effect hard to measure. Mitigation: Focus on simpler inputs or use a larger model if GPU is available.
+- Extracting vectors for long contexts might be noisy. Mitigation: Use short documents for extraction.
+
+## Success Criteria
+- Successful extraction of a summarization FV that improves ROUGE scores over the zero-shot baseline.
+- Meaningful differences found between FVs of different summarization styles.
+
+════════════════════════════════════════════════════════════════════════════════
+                          LITERATURE REVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+# Literature Review: Function Vectors for Summarization
+
+## Research Area Overview
+This research investigates the intersection of **representation engineering** and **abstractive summarization**. Specifically, it explores whether the &#34;Function Vector&#34; (FV) mechanism—previously identified in simple in-context learning (ICL) tasks—can be generalized to the more complex and constraint-driven task of summarization. The goal is to decode the internal &#34;default constraints&#34; (such as importance, length, and style) that LLMs apply when summarizing text.
+
+## Key Papers
+
+### 1. Function Vectors in Large Language Models (Todd et al., 2023)
+- **Authors**: Eric Todd, Millicent L. Li, et al.
+- **Key Contribution**: Identified that LLMs represent tasks as compact &#34;function vectors&#34; in their hidden states during ICL.
+- **Methodology**: Used causal mediation analysis to identify attention heads that mediate task execution. Summing the outputs of these heads creates the FV.
+- **Relevance**: Provides the foundational mechanism for task representation that this research aims to generalize to summarization.
+
+### 2. What Matters to an LLM? Behavioral and Computational Evidences from Summarization (Zhou et al., 2026)
+- **Authors**: Yongxin Zhou, Changshun Wu, et al.
+- **Key Contribution**: Investigated the internal notion of &#34;importance&#34; in LLM summarization.
+- **Methodology**: Combined behavioral analysis (generating length-controlled summaries) with computational probing and attention analysis.
+- **Results**: Identified that middle-to-late layers are highly predictive of what the model considers &#34;important.&#34;
+- **Relevance**: Directly supports the hypothesis that summarization constraints (like salience) are internally represented and can be decoded.
+
+### 3. Length Representations in Large Language Models (Moon et al., 2025)
+- **Authors**: Sangjun Moon, Dasom Choi, et al.
+- **Key Contribution**: Discovered internal representations of output sequence length in LLMs.
+- **Methodology**: Scaling specific hidden units allowed control over the output length.
+- **Results**: Showed that length information is partially disentangled from semantic information.
+- **Relevance**: Provides a concrete example of a summarization-related constraint (length) that is represented as a manipulatable vector/unit.
+
+### 4. Vector-ICL: In-context Learning with Continuous Vector Representations (Zhuang et al., 2024)
+- **Authors**: Zhuang et al.
+- **Key Contribution**: Explored ICL using continuous vectors instead of discrete tokens.
+- **Relevance**: Demonstrates that complex tasks, including summarization, can be triggered or guided by vector-based representations of the task context.
+
+## Common Methodologies
+1. **Causal Mediation Analysis**: Identifying which internal components (attention heads, layers) are causally responsible for a specific behavior.
+2. **Representation Probing**: Training linear probes on hidden states to predict task-related features (e.g., importance, length).
+3. **Activation Intervention**: Modifying hidden states (e.g., adding a task vector) to induce or change model behavior.
+
+## Standard Baselines
+- **Standard ICL**: Few-shot summarization without explicit vector extraction.
+- **Zero-shot Summarization**: Default model behavior.
+- **Extractive Baselines**: Lead-3 (first 3 sentences), TextRank (for importance comparison).
+
+## Evaluation Metrics
+- **ROUGE (1, 2, L)**: Standard for summarization quality.
+- **Faithfulness Metrics**: FactCC, QAGS (to check if FVs maintain or improve factuality).
+- **Vector Cosine Similarity**: To compare FVs extracted from different contexts or domains.
+
+## Gaps and Opportunities
+- **Complexity of Summarization**: While Todd et al. focused on simple tasks (e.g., antonyms), summarization involves multiple simultaneous constraints (salience, brevity, coherence).
+- **Decoding &#34;Default&#34; Constraints**: Most work focuses on *controlling* the model. There is an opportunity to use FVs to *understand* what a model naturally prioritizes when no explicit instructions are given.
+
+## Recommendations for Our Experiment
+1. **Dataset Selection**: Use CNN/Daily Mail (extractive bias) and XSum (abstractive bias) to see if FVs capture these differing &#34;default&#34; styles.
+2. **Layer-wise Analysis**: Focus on middle-to-late layers for FV extraction, as suggested by Zhou et al. (2026).
+3. **Constraint Decoding**: Extract FVs from prompts with different explicit constraints (e.g., &#34;summarize in one sentence&#34; vs &#34;summarize in detail&#34;) and compare them to the &#34;default&#34; summarization FV.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          PAPER REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+Generate a complete academic paper with the following structure:
+
+1. TITLE
+   - Clear, specific, informative
+   - Should convey main finding or contribution
+
+2. AUTHOR
+   - Use this exact author line in the \author{} block: Chenhao Tan and NeuriCo
+
+3. ABSTRACT (150-250 words)
+   - Problem statement
+   - Approach
+   - Key results
+   - Significance
+
+4. INTRODUCTION
+   - Research problem and motivation
+   - Gap in existing work
+   - Our contribution (be specific)
+   - Paper organization
+
+5. RELATED WORK
+   - Organized by theme/approach
+   - Position our work relative to prior work
+   - Cite papers from literature review
+
+6. METHODOLOGY
+   - Clear description of approach
+   - Experimental setup
+   - Datasets used
+   - Evaluation metrics
+   - Baselines
+
+7. RESULTS
+   - Present results with tables and figures
+   - Statistical analysis
+   - Comparison to baselines
+   - Ablation studies (if applicable)
+
+8. DISCUSSION
+   - Interpretation of results
+   - Limitations
+   - Broader implications
+
+9. CONCLUSION
+   - Summary of contributions
+   - Key findings
+   - Future work
+
+10. REFERENCES
+   - BibTeX format
+   - All cited papers
+
+════════════════════════════════════════════════════════════════════════════════
+                          OUTPUT FORMAT
+════════════════════════════════════════════════════════════════════════════════
+
+Create a MODULAR LaTeX project with the following directory structure:
+
+paper_draft/
+├── main.tex              # Main file that imports all sections
+├── references.bib        # BibTeX references
+├── sections/
+│   ├── abstract.tex      # Abstract content
+│   ├── introduction.tex  # Introduction section
+│   ├── related_work.tex  # Related work section
+│   ├── methodology.tex   # Methodology section
+│   ├── results.tex       # Results section
+│   ├── discussion.tex    # Discussion section
+│   └── conclusion.tex    # Conclusion section
+├── figures/              # Directory for any generated figures
+├── tables/               # Directory for complex standalone tables
+└── appendix/             # Directory for appendix sections (if needed)
+
+INSTRUCTIONS:
+1. First, create the directory structure above (mkdir -p paper_draft/sections paper_draft/figures paper_draft/tables paper_draft/appendix)
+2. Write main.tex using the EXACT preamble for NEURIPS:
+
+   \documentclass{article}
+   \usepackage[final]{neurips_2025}  % NEURIPS style (neurips_2025.sty is in paper_draft/)
+   \usepackage[hidelinks]{hyperref}  % REQUIRED: clickable links
+   \usepackage{booktabs}  % REQUIRED: professional tables
+   \usepackage{graphicx}
+   \usepackage{amsmath,amssymb}
+
+   % Import command files
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+   % Use this bibliography style:
+   \bibliographystyle{plainnat}
+
+   \author{Chenhao Tan and NeuriCo}
+
+   - Use \input{sections/...} to include each section
+   - Use \bibliography{references} for references
+3. Write each section file with COMPLETE content (no placeholders)
+4. Each section file should include its \section{} command
+5. Write references.bib with all citations in BibTeX format
+6. After writing all files, compile the paper:
+   cd paper_draft && pdflatex -interaction=nonstopmode main.tex && bibtex main && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+This modular structure allows humans to easily:
+- Edit individual sections without navigating a large file
+- Track changes per section
+- Reuse sections across different paper versions
+
+════════════════════════════════════════════════════════════════════════════════
+                          QUALITY REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+- Academic tone throughout
+- All claims must be supported by data from the experiment report
+- Proper citations using \cite{} commands
+- Clear figures and tables with proper captions
+- NO placeholder text - every section must have real content
+- The paper MUST compile without errors
+- If compilation fails, debug and fix the LaTeX errors
+
+════════════════════════════════════════════════════════════════════════════════
+                          LAB WRITING STYLE
+════════════════════════════════════════════════════════════════════════════════
+
+Follow these lab-specific conventions to match our paper style:
+
+1. LANGUAGE STYLE:
+   - Use active voice: "We propose", "We examine", "We focus on"
+   - Be direct and confident: "Our main question is...", "We hypothesize that..."
+   - State things clearly and simply - prefer plain language over jargon
+   - Use bold questions as paragraph organizers: {\bf what is X?}
+   - Include specific quantitative claims: "8.97% over baseline"
+   - Avoid fancy wording: "utilize" → "use", "facilitate" → "help"
+
+2. INTRODUCTION STRUCTURE:
+   - Engaging hook (get to the point quickly)
+   - Problem importance
+   - Gap identification
+   - Your approach with method figure reference
+   - Quantitative preview of results
+   - Contribution bullets (3-4 items, action verbs)
+
+3. CONTRIBUTION LISTS:
+   \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+       \item We propose...
+       \item We conduct...
+       \item We complement...
+   \end{itemize}
+
+4. MODULAR COMMANDS STRUCTURE:
+   Command templates are pre-copied to paper_draft/commands/:
+   - math.tex: Math notation macros
+   - general.tex: Formatting macros
+   - macros.tex: Project-specific term definitions (customize this for your paper)
+
+   In main.tex, include:
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+5. REFERENCE CONVENTIONS:
+   Use reference macros from math.tex:
+   - \figref{fig:name} for "figure 1" (lowercase, in-sentence)
+   - \Figref{fig:name} for "Figure 1" (capitalized, start of sentence)
+   - \secref{sec:name} for "section 2"
+
+6. TEXT FORMATTING:
+   - Use \para{Header text} for bold paragraph headers
+   - Define method/dataset names with \textsc and \xspace:
+     \newcommand{\methodname}{\textsc{MethodName}\xspace}
+
+7. TABLE FORMATTING:
+   - Use booktabs package (no vertical lines)
+   - Use \resizebox{\textwidth}{!}{...} for wide tables
+   - Use @{} to remove padding at table edges
+   - Use \cmidrule(lr){x-y} for sub-headers
+   - Use \textsc{} for dataset/method names in headers
+   - Bold best results with {\bf ...}
+
+8. FIGURE FORMATTING:
+   - Use 0.32\textwidth for 3-column subfigures
+   - Use 0.95\linewidth for full-width figures
+   - Use \input{figures/legend} for shared legends
+   - Write self-contained captions explaining key observations
+
+9. RESULTS PRESENTATION:
+   - Define \increase and \decrease for colored arrows (green up, red down)
+   - Bold best results in tables
+   - Report confidence intervals when available
+
+10. ALGORITHM STYLING:
+    - Use algpseudocode with [noend]
+    - Use \triangleright for comments
+
+11. HYPERLINKS (REQUIRED):
+    - Always use \usepackage[hidelinks]{hyperref} or with colored links
+    - All citations, section refs, figure refs, table refs must be clickable
+    - This is essential for reader navigation
+
+════════════════════════════════════════════════════════════════════════════════
+                          WORKFLOW: REVIEW AND REFLECT
+════════════════════════════════════════════════════════════════════════════════
+
+Before calling finish, you MUST complete these review steps:
+
+1. REVIEW RESOURCES (at the start):
+   - Read .gemini/skills/paper-writer/SKILL.md for detailed guidance
+   - Study templates/paper_writing/lab_style_guide.md for style conventions
+   - Browse paper_examples/ for formatting and language patterns
+
+2. SELF-REFLECTION (before finishing):
+   After writing all sections, review your work against these criteria:
+
+   LANGUAGE CHECK:
+   - [ ] Is the writing clear and jargon-free?
+   - [ ] Are claims specific with quantitative support?
+   - [ ] Is active voice used throughout?
+
+   FORMATTING CHECK:
+   - [ ] Does main.tex include \input{commands/math}, \input{commands/general}, \input{commands/macros}?
+   - [ ] Is hyperref package included for clickable references?
+   - [ ] Do tables use booktabs (no vertical lines)?
+   - [ ] Are best results bolded in tables?
+   - [ ] Are figures/tables properly captioned?
+
+   STRUCTURE CHECK:
+   - [ ] Does introduction follow: hook → importance → gap → approach → preview → contributions?
+   - [ ] Are contribution bullets specific with action verbs?
+   - [ ] Does the paper compile without errors?
+
+3. FIX ISSUES:
+   - Address any issues found in the self-reflection
+   - Re-compile and verify the PDF looks correct
+
+Only after completing this review should you consider the paper finished.

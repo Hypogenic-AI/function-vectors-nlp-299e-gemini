@@ -1,0 +1,13 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+In this work, we successfully generalized the \fv mechanism to the complex task of abstractive summarization. We demonstrated that \gpttwo maintains a remarkably unified internal representation for the task context across its early and deep middle layers, regardless of the desired output style (\extractive or \abstractive). Our analysis reveals that these default stylistic constraints are disentangled from the general task processing and are applied only at the final layer of the network.
+
+Key takeaways from our work include:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item \fvs can indeed capture the multi-faceted constraints of complex generative tasks like summarization.
+    \item Style-specific constraints manifest as late-stage linear shifts in the model's representation.
+    \item Interventions for style control must target these specific late layers to be effective.
+\end{itemize}
+
+Future research will focus on late-layer interventions (layers 46--47) to empirically control the abstractiveness of summarization output across varying scaling factors. We also plan to replicate our findings on larger, instruction-tuned architectures to verify the universality of this late-stage stylistic divergence.

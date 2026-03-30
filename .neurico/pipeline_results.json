@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "stages": {
+    "resource_finder": {
+      "success": true,
+      "completion_marker": "/workspaces/function-vectors-nlp-299e-gemini/.resource_finder_complete",
+      "outputs": {
+        "literature_review": "/workspaces/function-vectors-nlp-299e-gemini/literature_review.md",
+        "resources_catalog": "/workspaces/function-vectors-nlp-299e-gemini/resources.md",
+        "papers_dir": "/workspaces/function-vectors-nlp-299e-gemini/papers",
+        "datasets_dir": "/workspaces/function-vectors-nlp-299e-gemini/datasets",
+        "code_dir": "/workspaces/function-vectors-nlp-299e-gemini/code"
+      },
+      "log_file": "/workspaces/function-vectors-nlp-299e-gemini/logs/resource_finder_gemini.log",
+      "transcript_file": "/workspaces/function-vectors-nlp-299e-gemini/logs/resource_finder_gemini_transcript.jsonl",
+      "elapsed_time": 1512.712955713272
+    },
+    "experiment_runner": {
+      "success": true,
+      "return_code": 0,
+      "elapsed_time": 3317.709051847458,
+      "log_file": "/workspaces/function-vectors-nlp-299e-gemini/logs/execution_gemini.log",
+      "transcript_file": "/workspaces/function-vectors-nlp-299e-gemini/logs/execution_gemini_transcript.jsonl"
+    }
+  },
+  "work_dir": "/workspaces/function-vectors-nlp-299e-gemini"
+}

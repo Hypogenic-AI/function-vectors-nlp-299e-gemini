@@ -1,0 +1,19 @@
+\section{Discussion}
+\label{sec:discussion}
+
+Our investigation into \fvs for abstractive summarization provides key insights into how \fvsabbr represent complex tasks and their associated stylistic constraints.
+
+\para{Interpretations of Unified Task Representations.}
+The high cosine similarity ($> 0.93$) across the majority of the model's layers suggests that \gpttwo maintains a unified internal representation for the abstract task of ``summarization.'' This implies that, regardless of the desired output style, the model performs the same core set of operations: identifying salient information, compressing content, and establishing a summarization-specific language model context. The decision to output the final result in an \extractive or \abstractive style is disentangled from this unified task processing.
+
+\para{Late-Stage Stylistic Divergence.}
+The sharp drop in similarity at the final layer (Layer 47) is a significant finding. It demonstrates that default stylistic constraints are not monolithic parts of the task representation; instead, they are applied specifically as a final step before output generation. This provides empirical evidence for a hierarchical processing model in \fvsabbr: a general task context is established and refined through the network, while specific stylistic and structural constraints are applied only at the very end.
+
+\para{Failure of Middle-Layer Intervention.}
+Our intervention results showed that injecting style difference vectors into layer 24 has no effect on the final \rouge scores. This finding directly confirms our layer-wise similarity analysis. Since the stylistic constraints are not yet differentiated at layer 24, intervening with a vector meant to represent those constraints is ineffective. This suggests that future representation engineering efforts for complex tasks like summarization should focus on the final layers of the network, where the relevant stylistic representations are actually decodable and distinct.
+
+\para{Limitations.}
+There are several limitations to our work. First, we used \gpttwo, which, while useful for its architectural simplicity and fast inference, struggles with generating high-quality summaries compared to modern instruction-tuned models like Llama-3. Replicating our results on larger, more capable models is a key next step to verify if the late-stage constraint divergence holds universally across architectures. Additionally, our intervention experiments only targeted a single middle layer. A more comprehensive exploration of intervention depths (e.g., layers 40-47) is necessary to determine the optimal location for controlling stylistic bias.
+
+\para{Broader Implications.}
+Our work has important implications for the controllability of \fvsabbr. It suggests that we do not need separate, monolithic task vectors for every possible variation of a task. Instead, we can build a single, unified task representation and then apply stylistic or structural constraints through late-stage linear shifts. This modular approach to representation engineering could lead to more efficient and flexible methods for steering model behavior.

@@ -1,0 +1,30 @@
+[
+  {
+    "task": "summarization",
+    "domain": "general",
+    "prompts": [
+      {
+        "input": "The quick brown fox jumps over the lazy dog. The dog was too lazy to react. It was a sunny day in the forest.",
+        "output": "A quick fox jumps over a lazy dog on a sunny day."
+      },
+      {
+        "input": "Scientists have discovered a new species of frog in the Amazon rainforest. The frog is bright blue and has a unique call. It was found near a remote river.",
+        "output": "New blue frog species discovered in the Amazon."
+      },
+      {
+        "input": "The stock market reached a record high today as tech companies reported strong earnings. Investors are optimistic about the future of the economy.",
+        "output": "Tech earnings push stock market to record highs."
+      }
+    ]
+  },
+  {
+    "task": "summarization",
+    "domain": "legal",
+    "prompts": [
+      {
+        "input": "Section 1. This Act may be cited as the 'Environmental Protection Act'. Section 2. The purpose of this Act is to protect the environment from pollution. Section 3. Any person who violates this Act shall be subject to a fine.",
+        "output": "Act establishes environmental protection measures and penalties for violations."
+      }
+    ]
+  }
+]

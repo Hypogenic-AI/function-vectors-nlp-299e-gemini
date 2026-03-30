@@ -1,0 +1,19 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Large Language Models (\fvsabbr) exhibit a remarkable ability to perform complex tasks through in-context learning (\icl), where the model's behavior is guided by a few examples provided in the prompt. While the mechanism behind \icl has been extensively studied, recent work has identified that these models often represent tasks as compact \newterm{\fvs} in their hidden states~\cite{todd2023function}. However, these investigations have primarily focused on simple tasks like capitalization or antonym generation, leaving open the question of whether such representations can capture the multi-faceted constraints of more complex generative tasks like abstractive summarization.
+
+{\bf Why does this matter?} Understanding the internal representations that drive summarization is critical for building controllable and transparent \fvsabbr. Summarization is not just a semantic task; it involves multiple simultaneous constraints, including salience, length, and stylistic bias (e.g., \extractive versus \abstractive). If we can decode these ``default constraints'' from the model's internal activations, we may be able to steer the model's output style and verbosity without the need for extensive prompt engineering or fine-tuning.
+
+{\bf Gap identification.} Existing research on \fvs has demonstrated that simple tasks can be compressed into low-rank vectors, but it remains unclear whether complex, high-dimensional tasks like summarization share a similar unified representation. While some works have explored the internal representations of specific constraints like salience~\cite{zhou2026what} and length~\cite{moon2025length} independently, there is a lack of understanding regarding whether a single, unified \fv can capture the holistic, complex constraints of default summarization styles across different datasets.
+
+{\bf Our approach.} In this work, we generalize the \fv framework to the task of abstractive summarization. We extract layer-wise task representations from \gpttwo during few-shot summarization using two datasets with opposing default constraints: \cnndm, which favors an \extractive style, and \xsum, which favors an \abstractive style. By comparing these vectors across all layers of the model, we isolate the specific representations that encode the stylistic constraints of the task.
+
+Our analysis shows that \fvsabbr maintain a surprisingly unified internal representation for the general task of ``summarization'' throughout the majority of their layers. We find that the cosine similarity between the \extractive and \abstractive task vectors remains exceptionally high (up to $0.98$) from the early layers through to the deep middle layers. However, this similarity drops precipitously at the final layer, where it falls to $0.39$. This sharp divergence suggests that the model's decision to be \extractive or \abstractive is a late-stage stylistic constraint applied specifically at the network's output layer.
+
+Our main contributions are as follows:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item We demonstrate that the \fv framework generalizes to complex tasks like summarization, showing that \fvsabbr represent high-level task context as unified hidden state vectors.
+    \item We identify a sharp layer-wise divergence in task representations, proving that stylistic constraints (\extractive vs. \abstractive) are disentangled from general task processing and are applied only at the final stages of generation.
+    \item We show that middle-layer interventions with constraint-specific vectors are ineffective due to this task unification, providing a roadmap for more effective late-layer representation engineering.
+\end{itemize}
